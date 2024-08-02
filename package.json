@@ -1,6 +1,6 @@
 {
-  "name": "pcbvalues",
-  "version": "0.0.0",
+  "name": "pcbvalues-backend-cfworkers",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "deploy": "wrangler deploy",
@@ -11,5 +11,8 @@
     "@cloudflare/workers-types": "^4.20240208.0",
     "typescript": "^5.0.4",
     "wrangler": "^3.0.0"
+  },
+  "dependencies": {
+    "itty-router": "^4.0.27"
   }
 }
