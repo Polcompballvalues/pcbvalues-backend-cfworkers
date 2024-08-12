@@ -24,7 +24,7 @@ function mdEscape(text: string | number | null | undefined, fallback = "Missing"
 
     const mdRegex = /([_`\*\[\]\(\)])/g;
 
-    return text.replace(mdRegex, "\\\\$1");
+    return text.replace(mdRegex, "\\$1");
 }
 
 
