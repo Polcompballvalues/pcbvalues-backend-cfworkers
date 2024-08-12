@@ -1,5 +1,6 @@
-import dateFmtTokens from "./date-format";
 import type { ScoreEntry } from "./types";
+import dateFmtTokens from "./date-format";
+import strings from "./strings";
 
 function dedent(strings: TemplateStringsArray, ...args: unknown[]): string {
     const joinedStrings = [];
@@ -12,9 +13,13 @@ function dedent(strings: TemplateStringsArray, ...args: unknown[]): string {
     return joinedStrings.join("").replaceAll(/^\s+&/gm, "");
 }
 
-function mdEscape(text: string | null | undefined, fallback = "Missing"): string {
+function mdEscape(text: string | number | null | undefined, fallback = "Missing"): string {
     if (!text) {
         return fallback;
+    }
+
+    if (typeof text === "number") {
+        text = text.toFixed();
     }
 
     const mdRegex = /([_`\*\[\]\(\)])/g;
@@ -22,16 +27,14 @@ function mdEscape(text: string | null | undefined, fallback = "Missing"): string
     return text.replace(mdRegex, "\\\\$1");
 }
 
-function profanityCheck(text: string): boolean {
-
-
-
-    return false;
-}
 
 function fmtDate(format: string, dt: Date | null | undefined): string {
     if (!dt) {
-        return "Missing time!";
+        return strings.MISSING_TIME;
+    }
+
+    if (isNaN(dt.valueOf()) || dt.getFullYear() < 2023) {
+        return strings.BROKEN_TIMESTAMP;
     }
 
     const tokens = dateFmtTokens(format, dt);
@@ -67,9 +70,13 @@ export class Scores {
                 return `Invalid number in values array: ${elm}`;
             }
         }
-        //ADD REGEX PROFANITY CHECK
 
         return null;
+    }
+
+    checkProfanity(check: RegExp): boolean {
+        const match = check.exec(this.entry.name);
+        return !match;
     }
 
     async checkAuth(): Promise<boolean> {
@@ -90,17 +97,34 @@ export class Scores {
 
     async generateMarkdown(): Promise<string> {
 
+        let authenticity = strings.MISSING_DIGEST;
+        if (this.entry.digest) {
+            authenticity = (await this.checkAuth()) ? strings.AUTHENTIC_SCORE : strings.TAMPERED_SCORE;
+        }
+
+        let edition = strings.MISSING_EDITION;
+        if (this.entry.edition?.trim().toLowerCase() === "s") {
+            edition = strings.SHORT_EDITION;
+        } else if (this.entry.edition?.trim().toLowerCase() === "f") {
+            edition = strings.FULL_EDITION;
+        }
+
+        const data = {
+            name: this.entry.name,
+            stats: this.entry.vals
+        };
+
         return dedent`
             &**User:** ${mdEscape(this.entry.name)}
             &**Time Submitted:** ${fmtDate(Scores.FMT, new Date)} (UTC)
             &**Time Answered:** ${fmtDate(Scores.FMT, new Date(this.entry.time || 0) || null)} (UTC)
-            &**Edition:** ${mdEscape(this.entry.edition)}
-            &**Authenticity:** ${(await this.checkAuth()) ? "Valid" : "Tampered/Missing"}
-            &**Takes**: ${mdEscape(String(this.entry.takes))}
+            &**Edition:** ${edition}
+            &**Authenticity:** ${authenticity}
+            &**Takes**: ${mdEscape(this.entry.takes, strings.MISSING_TAKES)}
             &**User Agent:** ${mdEscape(this.userAgent)}
-            &**Version:** ${mdEscape(this.entry.version)}
+            &**Version:** ${mdEscape(this.entry.version, strings.MISSING_VERSION)}
             &\`\`\`json
-            &${JSON.stringify(null, null, 4)}
+            &${JSON.stringify(data, null, 4)}
             &\`\`\``;
     }
 }

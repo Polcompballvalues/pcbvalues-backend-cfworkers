@@ -20,18 +20,19 @@ const router = Router<IRequest, RouterArgs>();
 router.all<IRequest, RouterArgs>("*", preflight);
 
 router.get<IRequest, RouterArgs>("/", (req) => {
-
+    return { hello: "world" };
 });
 
 router.get<IRequest, RouterArgs>("/api/", () => {
+    return error(405, { message: "Missing API version" });
+});
+
+
+router.get<IRequest, RouterArgs>("/api/:version", () => {
     return error(405, { message: "This endpoint only accepts HTTP POST requests" });
 });
 
-type ApiRequest = {
-    version: string
-} & IRequestStrict;
-
-router.post<ApiRequest, RouterArgs>("/api/:version", async (req, env) => {
+router.post<IRequest, RouterArgs>("/api/:version", async (req, env) => {
 
     const ctype = req.headers.get("Content-Type");
     if (!ctype || !ctype.toLowerCase().startsWith("application/json")) {
@@ -40,9 +41,9 @@ router.post<ApiRequest, RouterArgs>("/api/:version", async (req, env) => {
         });
     }
 
-    const entry = await req.json<ScoreEntry>();
+    const entry = await req.json<ScoreEntry>() as ScoreEntry;
 
-    const apiKeys = API_VERSIONS[req.version];
+    const apiKeys = API_VERSIONS[req.params.version];
 
     if (!apiKeys) {
         return error(404, {
@@ -60,13 +61,31 @@ router.post<ApiRequest, RouterArgs>("/api/:version", async (req, env) => {
     const {
         WEBHOOK_ID: id,
         WEBHOOK_TOKEN: token,
-        WEBHOOK_USERNAME: username,
-        WEBHOOK_AVATAR: avatar
+        WEBHOOK_USERNAME: _raw_username,
+        WEBHOOK_AVATAR: avatar,
+        PROFANITY_FILTER
     } = env;
+
+    const username = _raw_username.replace("%%", req.params.version);
+
+    const filter = new RegExp(PROFANITY_FILTER, "gmui");
+
+    if (!scores.checkProfanity(filter)) {
+        return error(400, { message: "Bad username" });
+    }
 
     const webhook = new DiscordWBHK(id, token, { username, avatar });
 
     const resp = await webhook.post(await scores.generateMarkdown());
+
+    if (resp.status > 299) {
+        return error(500, {
+            message: `Error submitting to webhook: ${resp.statusText};
+            Response: ${await resp.text()}`
+        });
+    }
+
+    return { success: true };
 });
 
 export { router, corsify };

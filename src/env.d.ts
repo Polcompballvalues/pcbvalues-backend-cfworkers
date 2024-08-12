@@ -3,4 +3,5 @@ export interface Env {
     WEBHOOK_TOKEN: string;
     WEBHOOK_AVATAR: string;
     WEBHOOK_USERNAME: string;
+    PROFANITY_FILTER: string;
 }

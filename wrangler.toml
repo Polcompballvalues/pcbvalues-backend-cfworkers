@@ -3,5 +3,5 @@ main = "src/index.ts"
 compatibility_date = "2024-02-08"
 
 [vars]
-WEBHOOK_AVATAR = ""
-WEBHOOK_USERNAME = "PcbValues"
+WEBHOOK_AVATAR = "https://raw.githubusercontent.com/pcbvalues/pcbvalues.github.io/main/assets/icon.png"
+WEBHOOK_USERNAME = "PcbValues Score Webhook - %%"
